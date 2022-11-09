@@ -13,7 +13,7 @@ const TOTAL_MINT_COUNT = 50;
 
 const App = () => {
   const[currentAccount,setCurrentAccount]=useState("")
-  const [loading,setLoading]=useState(false)
+  const [loading,setLoading]=useState(null)
   const checkIfWalletConnected = async () => {
 
     if (!window.ethereum) {
@@ -33,6 +33,16 @@ const App = () => {
     }
   
   }
+  toast('🦄 Minting Started!', {
+    position: "bottom-center",
+    autoClose: 5000,
+    hideProgressBar: false,
+    closeOnClick: true,
+    pauseOnHover: true,
+    draggable: true,
+    progress: undefined,
+    theme: "light",
+    });
   // Render Methods
   const renderNotConnectedContainer = () => (
     <button className="cta-button connect-wallet-button my-3" onClick={connectWallet}>
@@ -56,6 +66,8 @@ const App = () => {
       /*
       * Boom! This should print out public address once we authorize Metamask.
       */
+
+      
       console.log("Connected", accounts[0]);
       setCurrentAccount(accounts[0]); 
     } catch (error) {
@@ -89,9 +101,20 @@ const App = () => {
       console.log(error)
     }
   }
+const chainCheck= async () => {
+  let chainId = await window.ethereum.request({ method: 'eth_chainId' });
+console.log("Connected to chain " + chainId);
 
+// String, hex code of the chainId of the Rinkebey test network
+const goerliChainId = "0x5"; 
+if (chainId !== goerliChainId) {
+	alert("You are not connected to the Goerli Test Network!");
+}
+}
   useEffect(() => {
+    chainCheck();
     checkIfWalletConnected();
+    
   },[])
 
   return (
@@ -107,7 +130,7 @@ const App = () => {
           ) : (
             <button onClick={askContractToMintNft} className="cta-button connect-wallet-button">
               {loading?"Miniting....":"Mint NFT"}
-              {loading?(<ToastContainer></ToastContainer>):<></>}
+             
             </button>)}
         </div>
         <div className="footer-container">
