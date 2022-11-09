@@ -1,7 +1,10 @@
 import './App.css';
 import twitterLogo from './twitter-logo.svg';
-import React from "react";
-
+import React,{useEffect,useState} from "react";
+import{ethers} from 'ethers';
+import { CONTRACT_ADDRESS,ABI } from './constant';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 // Constants
 const TWITTER_HANDLE = 'vishaldev09';
 const TWITTER_LINK = `https://twitter.com/${TWITTER_HANDLE}`;
@@ -9,22 +12,103 @@ const OPENSEA_LINK = '';
 const TOTAL_MINT_COUNT = 50;
 
 const App = () => {
+  const[currentAccount,setCurrentAccount]=useState("")
+  const [loading,setLoading]=useState(false)
+  const checkIfWalletConnected = async () => {
+
+    if (!window.ethereum) {
+      console.log("Make sure you have metamask!");
+      return;
+    } else {
+      console.log("We have the ethereum object", window.ethereum);
+    }
+
+    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+    if (accounts.length !== 0) {
+      const account = accounts[0];
+      console.log("Found an authorized account:", account);
+      setCurrentAccount(account);
+    } else {
+      console.log("No authorized account found");
+    }
+  
+  }
   // Render Methods
   const renderNotConnectedContainer = () => (
-    <button className="cta-button connect-wallet-button my-3">
+    <button className="cta-button connect-wallet-button my-3" onClick={connectWallet}>
       Connect to Wallet
     </button>
   );
+  const connectWallet = async () => {
+    try {
+      const { ethereum } = window;
+
+      if (!ethereum) {
+        alert("Get MetaMask!");
+        return;
+      }
+
+      /*
+      * Fancy method to request access to account.
+      */
+      const accounts = await ethereum.request({ method: "eth_requestAccounts" });
+
+      /*
+      * Boom! This should print out public address once we authorize Metamask.
+      */
+      console.log("Connected", accounts[0]);
+      setCurrentAccount(accounts[0]); 
+    } catch (error) {
+      console.log(error);
+    }
+  }
+  const askContractToMintNft = async () => {
+    
+  
+    try {
+      const { ethereum } = window;
+  
+      if (ethereum) {
+        const provider = new ethers.providers.Web3Provider(ethereum);
+        const signer = provider.getSigner();
+        const connectedContract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
+  
+        console.log("Going to pop wallet now to pay gas...")
+        let nftTxn = await connectedContract.makeAnEpicNFT();
+  
+        console.log("Mining...please wait.")
+        setLoading(true)
+        await nftTxn.wait();
+        setLoading(false)
+        console.log(`Mined, see transaction: https://goerli.etherscan.io/tx/${nftTxn.hash}`);
+  
+      } else {
+        console.log("Ethereum object doesn't exist!");
+      }
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
+  useEffect(() => {
+    checkIfWalletConnected();
+  },[])
 
   return (
     <div className="App flex">
-      <div className="container pt-[150px]">
+      <div className="container pt-[250px]">
         <div className="header-container">
           <p className="header gradient-text">My NFT Collection</p>
           <p className="sub-text my-3">
             Each unique. Each beautiful. Discover your NFT today.
           </p>
-          {renderNotConnectedContainer()}
+          {currentAccount === "" ? (
+            renderNotConnectedContainer()
+          ) : (
+            <button onClick={askContractToMintNft} className="cta-button connect-wallet-button">
+              {loading?"Miniting....":"Mint NFT"}
+              {loading?(<ToastContainer></ToastContainer>):<></>}
+            </button>)}
         </div>
         <div className="footer-container">
           <img alt="Twitter Logo" className="twitter-logo" src={twitterLogo} />
